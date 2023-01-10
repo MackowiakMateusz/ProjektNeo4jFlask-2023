@@ -1,0 +1,1 @@
+![plot](./ReadmeImages/ExerciseContentInPolish.png)
