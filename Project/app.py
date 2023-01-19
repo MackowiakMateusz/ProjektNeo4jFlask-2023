@@ -7,9 +7,9 @@ load_dotenv()
 
 app = Flask(__name__)
 
-uri = "bolt://localhost:7687" #os.getenv('URI')
-user = "neo4j"#os.getenv("USERNAME")
-password = "test1234"#os.getenv("PASSWORD")
+uri =  os.getenv('URI')
+user = os.getenv("USERNAME")
+password = os.getenv("PASSWORD")
 driver = GraphDatabase.driver(uri, auth=(user, password),database="neo4j")
 #(15%) Stwórz w bazie danych neo4j labele Employee i Department oraz relacje WORKS_IN i MANAGES.
 # Dodaj do bazy danych wiele węzłów pracowników i departamentów oraz połącz je odpowiednimi relacjami.
@@ -132,26 +132,7 @@ def get_departments_route():
     response = {'departments': departments}
     return jsonify(response)
 
-def get_department(tx, name):
-    query = "MATCH (m:Department) WHERE m.name=$name RETURN m"
-    result = tx.run(query, name=name).data()
 
-    if not result:
-        return None
-    else:
-        return {'name': result[0]['m']['name'], 'established_in_year': result[0]['m']['established_in_year']}
-
-@app.route('/departments/<string:name>', methods=['GET'])
-def get_department_route(name):
-    with driver.session() as session:
-        department = session.read_transaction(get_department, name)
-
-    if not department:
-        response = {'message': 'Department not found'}
-        return jsonify(response), 404
-    else:
-        response = {'department': department}
-        return jsonify(response)
 
 def add_department(tx, name, year):
     query = "CREATE (m:Department {name: $name, established_in_year: $established_in_year})"
@@ -229,8 +210,8 @@ def connect_by_WORKS_IN(tx, employee_id,department_id):
         return None
     else:# a tutaj robi relacje
         query = "MATCH (employee:Employee), (department:Department) WHERE ID(employee)=employee_id AND ID(department)=$department_id CREATE (employee)-[works_in:WORKS_IN]->(department)"
-        tx.run(query, name=name)
-        return {'name': name}
+        tx.run(query, employee_id=employee_id,department_id=department_id)
+        return {'employee_id': employee_id,'department_id': department_id}
 
 @app.route('/employees/add_relation_subservient_to_department/WORKS_IN/<string:employee_id>/<string:department_id>', methods=['POST'])
 def add_relation_subservient_to_department_WORKS_IN(employee_id,department_id):
@@ -252,8 +233,8 @@ def connect_by_MANAGES(tx, employee_id,department_id):
         return None
     else:# a tutaj robi relacje
         query = "MATCH (employee:Employee), (department:Department) WHERE ID(employee)=employee_id AND ID(department)=$department_id CREATE (employee)-[manages:MANAGES]->(department)"
-        tx.run(query, name=name)
-        return {'name': name}
+        tx.run(query, employee_id=employee_id,department_id=department_id)
+        return {'employee_id': employee_id,'department_id': department_id}
 
 @app.route('/employees/add_relation_subservient_to_department/MANAGES/<string:employee_id>/<string:department_id>', methods=['POST'])
 def add_relation_subservient_to_department_MANAGES(employee_id,department_id):
@@ -266,8 +247,51 @@ def add_relation_subservient_to_department_MANAGES(employee_id,department_id):
     else:
         response = {'status': 'success'}
         return jsonify(response)
-#Koniec podpunktu 1
+# Koniec wszystkich podpunktow
+# dodanie sortowan
+#(10%) Napisz funkcję, która będzie zwracać wszystkich pracowników z bazy danych na endpoint /employees metodą GET. Użytkownik powinien mieć możliwość filtrowania i sortowania pracowników według różnych kryteriów (np. według imienia, nazwiska, stanowiska).
+# tam bylo np. napisane, zastapilem te 3 parametry 2-ma funkcjami, i sortuje po roku zatrudnienia i imieniu i nazwisku, tyle ze imie i nazwisko zawiera sie w name
+def get_department_by_name(tx, name):
+    query = "MATCH (m:Department) WHERE m.name=$name RETURN m"
+    result = tx.run(query, name=name).data()
 
+    if not result:
+        return None
+    else:
+        return {'name': result[0]['m']['name'], 'established_in_year': result[0]['m']['established_in_year']}
+
+@app.route('/departments/<string:name>', methods=['GET'])
+def get_department_route(name):
+    with driver.session() as session:
+        department = session.read_transaction(get_department_by_name, name)
+
+    if not department:
+        response = {'message': 'Department not found'}
+        return jsonify(response), 404
+    else:
+        response = {'department': department}
+        return jsonify(response)
+
+def get_department_by_established_in_year(tx,established_in_year):
+    query = "MATCH (m:Department) WHERE m.established_in_year=$established_in_year RETURN m"
+    result = tx.run(query,established_in_year=established_in_year).data()
+
+    if not result:
+        return None
+    else:
+        return {'name': result[0]['m']['name'], 'established_in_year': result[0]['m']['established_in_year']}
+
+@app.route('/departments/<string:established_in_year>', methods=['GET'])
+def get_department_route(established_in_year):
+    with driver.session() as session:
+        department = session.read_transaction(get_department_by_established_in_year, established_in_year)
+
+    if not department:
+        response = {'message': 'Department not found'}
+        return jsonify(response), 404
+    else:
+        response = {'department': department}
+        return jsonify(response)
 if __name__ == '__main__':
     app.run()
 
