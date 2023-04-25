@@ -1,2 +1,2 @@
-Project of REST API made in Flask <br\>
+Project of Gdańsk Unviersity REST API made in Flask.
 ![plot](./ReadmeImages/ExerciseContentInPolish.png)
